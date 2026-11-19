@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>InkWell Blogs</title>
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --card: #fff;
+      --tx: #1d1b19;
+      --mut: #6b655e;
+      --ac: #c2410c;
+      --bd: #e6e0d8;
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #171513;
+        --card: #211e1b;
+        --tx: #f2ede6;
+        --mut: #a39a8f;
+        --ac: #fb923c;
+        --bd: #38332d;
+        color-scheme: dark;
+      }
+    }
+    * {
+      box-sizing: border-box;
+    }
+    html {
+      scroll-padding-top: env(safe-area-inset-top, 0px);
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--tx);
+      font: 16px/1.6 Georgia, serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--bd);
+      background: var(--card);
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--ac);
+    }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    button, input, select, textarea {
+      font: inherit;
+      color: var(--tx);
+    }
+    button {
+      background: var(--ac);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    button.g {
+      background: transparent;
+      color: var(--tx);
+      border: 1px solid var(--bd);
+    }
+    button.d {
+      background: #b91c1c;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0 12px;
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      background: var(--card);
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card h3 {
+      margin: 0 0 4px;
+      cursor: pointer;
+    }
+    .card h3:hover {
+      color: var(--ac);
+    }
+    .meta {
+      color: var(--mut);
+      font-size: 14px;
+    }
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .chip {
+      padding: 5px 12px;
+      border: 1px solid var(--bd);
+      border-radius: 20px;
+      cursor: pointer;
+      background: var(--card);
+      font-size: 14px;
+    }
+    .chip.on {
+      background: var(--ac);
+      color: #fff;
+      border-color: var(--ac);
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .body {
+      white-space: pre-wrap;
+    }
+    .cm {
+      border-top: 1px solid var(--bd);
+      padding: 10px 0;
+    }
+    .auth {
+      max-width: 380px;
+      margin: 40px auto;
+    }
+    .err {
+      color: #b91c1c;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo" onclick="go('feed')">✒ InkWell</span>
+    <div class="row" id="nav"></div>
+  </header>
+  <main id="app"></main>
+
+  <script>
+    const TOPICS = ["Technology", "Travel", "Food", "Lifestyle", "Education"];
+    const L = (k, d) => {
+      try {
+        return JSON.parse(localStorage.getItem(k)) || d;
+      } catch (e) {
+        return d;
+      }
+    };
+    const S = (k, v) => {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+      } catch (e) {}
+    };
+
+    let users = L('ik_users', []);
+    let blogs = L('ik_blogs', null);
+    let me = L('ik_me', null);
+    let st = { view: 'feed', topic: 'All', id: null, err: '' };
+
+    if (!blogs) {
+      blogs = [
+        {
+          id: 1,
+          title: "Getting started with JavaScript",
+          topic: "Technology",
+          body: "JavaScript runs in every browser. Start with variables, functions and the DOM, then build small projects to learn faster.",
+          author: "Ava",
+          date: Date.now() - 86400000 * 3,
+          comments: [{ u: "Ben", t: "Great intro!", d: Date.now() - 86400000 }]
+        },
+        {
+          id: 2,
+          title: "Three days in Kyoto",
+          topic: "Travel",
+          body: "Temples at sunrise, street food at night, and plenty of walking. Buy a transit pass and wake up early.",
+          author: "Ben",
+          date: Date.now() - 86400000 * 2,
+          comments: []
+        },
+        {
+          id: 3,
+          title: "Learning JavaScript the fun way",
+          topic: "Education",
+          body: "Games and tiny tools teach JavaScript better than tutorials alone. Pick a project you care about.",
+          author: "Ava",
+          date: Date.now() - 86400000,
+          comments: []
+        }
+      ];
+      S('ik_blogs', blogs);
+    }
+
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
+
+    const fd = t => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+    const sha = async s => [
+      ...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
+    ].map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const save = () => S('ik_blogs', blogs);
+
+    function go(v, id) {
+      st.view = v;
+      st.id = id || null;
+      st.err = '';
+      render();
+    }
+
+    function need() {
+      if (!me) {
+        go('login');
+        return false;
+      }
+      return true;
+    }
+
+    async function auth(reg) {
+      const u = document.getElementById('u').value.trim();
+      const p = document.getElementById('p').value;
+      if (u.length < 3 || p.length < 4) {
+        st.err = 'Username 3+ chars and password 4+ chars required.';
+        return render();
+      }
+      const h = await sha(p);
+      const ex = users.find(x => x.u.toLowerCase() === u.toLowerCase());
+      if (reg) {
+        if (ex) {
+          st.err = 'Username already taken.';
+          return render();
+        }
+        users.push({ u, h });
+        S('ik_users', users);
+        me = u;
+      } else {
+        if (!ex || ex.h !== h) {
+          st.err = 'Invalid username or password.';
+          return render();
+        }
+        me = ex.u;
+      }
+      S('ik_me', me);
+      go('feed');
+    }
+
+    function logout() {
+      me = null;
+      S('ik_me', null);
+      go('feed');
+    }
+
+    function saveBlog() {
+      const t = document.getElementById('t').value.trim();
+      const tp = document.getElementById('tp').value;
+      const b = document.getElementById('b').value.trim();
+      if (!t || !b) {
+        st.err = 'Title and content are required.';
+        return render();
+      }
+      if (st.id) {
+        const x = blogs.find(x => x.id === st.id);
+        if (x && x.author === me) {
+          Object.assign(x, { title: t, topic: tp, body: b });
+        }
+      } else {
+        const id = Date.now();
+        blogs.unshift({
+          id,
+          title: t,
+          topic: tp,
+          body: b,
+          author: me,
+          date: id,
+          comments: []
+        });
+        st.id = id;
+      }
+      save();
+      go('view', st.id);
+    }
+
+    function delBlog(id) {
+      const x = blogs.find(b => b.id === id);
+      if (!x || x.author !== me || !confirm('Delete this blog?')) return;
+      blogs = blogs.filter(b => b.id !== id);
+      save();
+      go('feed');
+    }
+
+    function addComment(id) {
+      if (!need()) return;
+      const el = document.getElementById('c');
+      const t = el.value.trim();
+      if (!t) return;
+      blogs.find(b => b.id === id).comments.push({ u: me, t, d: Date.now() });
+      save();
+      render();
+    }
+
+    function delComment(id, i) {
+      const b = blogs.find(b => b.id === id);
+      if (b.comments[i].u === me) {
+        b.comments.splice(i, 1);
+        save();
+        render();
+      }
+    }
+
+    function related(b) {
+      const w = s => new Set(s.toLowerCase().split(/\W+/).filter(x => x.length > 3));
+      const bw = w(b.title);
+      return blogs
+        .filter(x => x.id !== b.id)
+        .map(x => ({
+          x,
+          s: (x.topic === b.topic ? 2 : 0) + [...w(x.title)].filter(k => bw.has(k)).length
+        }))
+        .filter(r => r.s > 0)
+        .sort((a, c) => c.s - a.s)
+        .slice(0, 3)
+        .map(r => r.x);
+    }
+
+    const card = b => `<div class="card">
+      <h3 onclick="go('view',${b.id})">${esc(b.title)}</h3>
+      <div class="meta">${esc(b.topic)} · by ${esc(b.author)} · ${fd(b.date)} · ${b.comments.length} comments</div>
+      <p>${esc(b.body.slice(0, 140))}${b.body.length > 140 ? '…' : ''}</p>
+    </div>`;
+
+    function render() {
+      document.getElementById('nav').innerHTML = me
+        ? `<span class="meta">Hi, ${esc(me)}</span>
+           <button onclick="go('mine')" class="g">My blogs</button>
+           <button onclick="go('edit')">+ New blog</button>
+           <button class="g" onclick="logout()">Log out</button>`
+        : `<button onclick="go('login')">Log in / Sign up</button>`;
+
+      const a = document.getElementById('app');
+      const v = st.view;
+      let h = '';
+
+      if (v === 'login') {
+        h = `<div class="card auth">
+          <h2>Welcome</h2>
+          <label>Username<input id="u" autocomplete="username"></label>
+          <label>Password<input id="p" type="password" autocomplete="current-password"></label>
+          <div class="err">${esc(st.err)}</div>
+          <div class="row">
+            <button onclick="auth(false)">Log in</button>
+            <button class="g" onclick="auth(true)">Create account</button>
+          </div>
+        </div>`;
+      } else if (v === 'feed' || v === 'mine') {
+        let list = blogs.filter(b => v === 'feed' || b.author === me);
+        if (v === 'feed' && st.topic !== 'All') {
+          list = list.filter(b => b.topic === st.topic);
+        }
+        h = (v === 'feed'
+          ? `<div class="chips">${['All', ...TOPICS].map(t => `<span class="chip ${t === st.topic ? 'on' : ''}" onclick="st.topic='${t}';render()">${t}</span>`).join('')}</div>`
+          : '<h2>My blogs</h2>') + (list.map(card).join('') || '<p class="meta">No blogs here yet.</p>');
+      } else if (v === 'edit') {
+        if (!me) return go('login');
+        const b = st.id ? blogs.find(x => x.id === st.id) : null;
+        if (b && b.author !== me) return go('feed');
+        h = `<div class="card">
+          <h2>${b ? 'Edit blog' : 'New blog'}</h2>
+          <label>Title<input id="t" value="${b ? esc(b.title) : ''}"></label>
+          <label>Topic<select id="tp">${TOPICS.map(t => `<option ${b && b.topic === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label>Content<textarea id="b" rows="10">${b ? esc(b.body) : ''}</textarea></label>
+          <div class="err">${esc(st.err)}</div>
+          <div class="row">
+            <button onclick="saveBlog()">Save</button>
+            <button class="g" onclick="go('feed')">Cancel</button>
+          </div>
+        </div>`;
+      } else if (v === 'view') {
+        const b = blogs.find(x => x.id === st.id);
+        if (!b) return go('feed');
+        const r = related(b);
+        h = `<button class="g" onclick="go('feed')">← Back</button>
+        <div class="card" style="margin-top:14px">
+          <h2>${esc(b.title)}</h2>
+          <div class="meta">${esc(b.topic)} · by ${esc(b.author)} · ${fd(b.date)}</div>
+          ${b.author === me ? `<div class="row" style="margin:10px 0"><button class="g" onclick="go('edit',${b.id})">Edit</button><button class="d" onclick="delBlog(${b.id})">Delete</button></div>` : ''}
+          <p class="body">${esc(b.body)}</p>
+        </div>
+        <div class="card">
+          <h3 style="cursor:default">Comments (${b.comments.length})</h3>
+          ${b.comments.map((c, i) => `<div class="cm"><b>${esc(c.u)}</b> <span class="meta">${fd(c.d)}</span>${c.u === me ? ` <a href="#" onclick="delComment(${b.id},${i});return false" class="meta">delete</a>` : ''}<div>${esc(c.t)}</div></div>`).join('')}
+          ${me ? `<textarea id="c" rows="3" placeholder="Write a comment…"></textarea><button onclick="addComment(${b.id})">Post comment</button>` : `<p class="meta">Log in to comment.</p>`}
+        </div>
+        ${r.length ? `<h3>Related blogs</h3>${r.map(card).join('')}` : ''}`;
+      }
+      a.innerHTML = h;
+    }
+
+    render();
+  </script>
+</body>
+</html>
